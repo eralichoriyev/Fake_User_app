@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Fake User App for Itransition Task 6</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 15px; }
+        th, td { border: 1px solid #2108ff; padding: 6px; text-align: left; }
+        th { background-color: #c3ff37; }
+        .controls { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+<h2>Fake User App for Itransition Task 6</h2>
+
+<form method="get" class="controls">
+    <label>
+        Locale:
+        <select name="locale_id">
+            {% for loc in locales %}
+                <option value="{{ loc.id }}"
+                    {% if loc.id == locale_id %}selected{% endif %}>
+                    {{ loc.code }}
+                </option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label>
+        Seed:
+        <input type="number" name="seed" value="{{ seed }}">
+    </label>
+
+    <input type="hidden" name="batch" value="0">
+    <button type="submit">Generate</button>
+</form>
+
+{% if users %}
+<table>
+    <tr>
+        <th>Name</th>
+        <th>Latitude</th>
+        <th>Longitude</th>
+        <th>Height (cm)</th>
+        <th>Weight (kg)</th>
+        <th>Phone</th>
+        <th>Email</th>
+    </tr>
+
+    {% for u in users %}
+    <tr>
+        <td>{{ u.full_name }}</td>
+        <td>{{ "%.4f"|format(u.latitude) if u.latitude is not none else "N/A" }}</td>
+        <td>{{ "%.4f"|format(u.longitude) if u.longitude is not none else "N/A" }}</td>
+        <td>{{ u.height_cm }}</td>
+        <td>{{ u.weight_kg }}</td>
+        <td>{{ u.phone }}</td>
+        <td>{{ u.email }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<br>
+
+<a href="/?locale_id={{ locale_id }}&seed={{ seed }}&batch={{ batch + 1 }}">
+    ▶ Next batch
+</a>
+{% endif %}
+
+</body>
+</html>
