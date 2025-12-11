@@ -10,20 +10,17 @@ The goal is to have a “Faker-like” library implemented directly in SQL and c
 All randomness is implemented in SQL.
 The Python layer is only responsible for:
 
-    calling stored procedures,
-    passing parameters (locale, seed, batch index, batch size),
-    and rendering HTML.
+   calling stored procedures,
+   passing parameters (locale, seed, batch index, batch size),
+   and rendering HTML.
 
 Database Schema
 
 locales
 
 Stores supported locales (regions / languages).
-    <!-- CREATE TABLE locales (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        code VARCHAR(10) NOT NULL UNIQUE,   -- e.g. 'en_US', 'de_DE', 'pl_PL'
-        description VARCHAR(100)
-    ); -->
+    <img width="671" height="193" alt="image" src="https://github.com/user-attachments/assets/f451d597-8e88-465f-97f3-eefa5a4cc556" />
+
 
 Example rows:
     en_US – English / United States
@@ -34,55 +31,29 @@ Example rows:
 Used by other tables via locale_id.
 name_parts
 Extensible table for all name-related building blocks.
-    <!-- CREATE TABLE name_parts (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        locale_id INT NOT NULL,
-        part_type ENUM('first', 'middle', 'last', 'title') NOT NULL,
-        gender ENUM('unknown', 'male', 'female') DEFAULT 'unknown',
-        value VARCHAR(100) NOT NULL,
-        popularity_weight INT DEFAULT 1,
-        CONSTRAINT fk_name_parts_locale
-            FOREIGN KEY (locale_id) REFERENCES locales(id)
-    ); -->
-    part_type controls whether this row is title, first name, middle name, or last name
-    locale_id links to locales
-    gender can be used to customize distributions
-    popularity_weight allows non-uniform sampling (e.g. “Smith” more common than “Brown”)
+   <img width="706" height="290" alt="image" src="https://github.com/user-attachments/assets/04d0c3d2-1905-4061-85cb-c0c4d2f8e777" />
+
+part_type controls whether this row is title, first name, middle name, or last name
+locale_id links to locales
+gender can be used to customize distributions
+popularity_weight allows non-uniform sampling (e.g. “Smith” more common than “Brown”)
 
 This satisfies the requirement of a single table instead of english_names, german_names, etc.
 
 address_parts (extensible, optional usage)
-        <!-- CREATE TABLE address_parts (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            locale_id INT NOT NULL,
-            part_type ENUM(
-                'street_name',
-                'street_suffix',
-                'city',
-                'state',
-                'postal_code_format',
-                'address_pattern'
-            ) NOT NULL,
-            value VARCHAR(255) NOT NULL,
-            popularity_weight INT DEFAULT 1,
-            CONSTRAINT fk_address_parts_locale
-                FOREIGN KEY (locale_id) REFERENCES locales(id)
-        ); -->
+       <img width="881" height="340" alt="image" src="https://github.com/user-attachments/assets/e6927298-4890-481a-94a9-8e0ce5beeffb" />
+
 This table is designed to generate locale-specific addresses using:
     components (street_name, street_suffix, city, …),
     and pattern templates (e.g. {street_number} {street_name} {street_suffix}, {city}).
 
-    Note: in the current implementation, address generation can be added on top of the existing pattern using the same seeded-random approach as for names.
+Note: in the current implementation, address generation can be added on top of the existing pattern using the same seeded-random approach as for names.
 
 Stored Routines (“Library API”)
 1. seeded_rand – deterministic uniform random generator
 Signature:
-    <!-- CREATE FUNCTION seeded_rand(
-        seed BIGINT,
-        batch_idx INT,
-        row_idx INT,
-        salt INT
-    ) RETURNS DOUBLE -->
+   <img width="1078" height="660" alt="image" src="https://github.com/user-attachments/assets/ba8e5365-9167-42cb-b161-1ef4ae9394e0" />
+
 Purpose:
 Deterministic pseudo-random number generator that returns a uniform value in [0, 1).
 It is purely functional: for the same parameters, it always returns the same result. This guarantees reproducibility across runs.
@@ -94,15 +65,8 @@ Algorithm:
     Convert hex → decimal using CONV
     Normalize to [0, 1) by dividing with a large constant.
 Pseudo-code:
-    <!-- RETURN (
-        CONV(
-            SUBSTRING(
-                SHA2(CONCAT(seed, '-', batch_idx, '-', row_idx, '-', salt), 256),
-                1, 15
-            ),
-            16, 10
-        ) / 9000000000000000
-    ); -->
+ <img width="731" height="249" alt="image" src="https://github.com/user-attachments/assets/07a8600d-7cc7-4aea-b7d2-b15a56178300" />
+
 Usage:
     seed – user-provided seed (ensures reproducibility)
     batch_idx – which batch (page) we are generating (0, 1, 2, …)
@@ -114,12 +78,8 @@ Because it is based on a hash, the output is:
     independent between different salts.
 2. generate_fake_user – generate a single user (core logic)
 Signature:
-    <!-- CREATE PROCEDURE generate_fake_user(
-        IN p_locale_id INT,
-        IN p_seed BIGINT,
-        IN p_batch_idx INT,
-        IN p_row_idx INT
-    ) -->
+    <<img width="227" height="127" alt="image" src="https://github.com/user-attachments/assets/5efd7fac-c41f-4f4c-a1ab-4477b5b599f1" />
+
 Arguments:
     p_locale_id – which locale’s data to use (locales.id)
     p_seed – user-provided seed
@@ -144,11 +104,8 @@ Title / First / Middle / Last name
     Names are concatenated using CONCAT_WS and TRIM
 
 
-<!-- SELECT value INTO v_first
-FROM name_parts
-WHERE locale_id = p_locale_id AND part_type = 'first'
-ORDER BY seeded_rand(p_seed, p_batch_idx, p_row_idx, 100 + id)
-LIMIT 1; -->
+<img width="567" height="131" alt="image" src="https://github.com/user-attachments/assets/242c161c-feb9-488c-b140-b08d194552de" />
+
 
 Geolocation – uniform on the sphere
 To get a uniform distribution on a sphere:
@@ -160,11 +117,8 @@ longitude = 360v - 180 -->
 
 In SQL:
 
-<!-- SET u = seeded_rand(p_seed, p_batch_idx, p_row_idx, 10);
-SET v = seeded_rand(p_seed, p_batch_idx, p_row_idx, 11);
+<img width="527" height="117" alt="image" src="https://github.com/user-attachments/assets/5ea25478-40e8-4f31-b6f9-2aa2f8ede0ba" />
 
-SET latitude  = DEGREES(ASIN(2 * u - 1));
-SET longitude = 360 * v - 180; -->
 
 This ensures the probability density is constant over the sphere, not clustered towards the poles.
 Physical attributes – normal distribution (Box–Muller)
@@ -175,19 +129,13 @@ To generate a standard normal variable Z ~ N(0, 1), the Box–Muller transform i
 where U1, U2 ~ U(0, 1). To avoid numerical issues (ln(0)), values are clamped into (0,1).
 In SQL:
 
-<!-- SET z =
-    SQRT(-2 * LN(
-        LEAST(
-            GREATEST(seeded_rand(p_seed, p_batch_idx, p_row_idx, 20), 0.0001),
-            0.9999
-        )
-    )) * COS(2 * PI() * seeded_rand(p_seed, p_batch_idx, p_row_idx, 21)); -->
+<img width="586" height="152" alt="image" src="https://github.com/user-attachments/assets/cb9303f3-836a-4b41-9df7-e6080b33bff1" />
+
 
 Then height and weight are computed as affine transforms:
 
+<img width="413" height="65" alt="image" src="https://github.com/user-attachments/assets/f4587a1b-0d0a-46d4-98fa-3be935940111" />
 
-<!-- SET height_cm = ROUND(170 + z * 10, 1); -- mean ~170cm, sigma ~10
-SET weight_kg = ROUND(70 + z * 15, 1);  -- mean ~70kg, sigma ~15 -->
 
 Phone number – Polish format
 Phone numbers are generated deterministically in Polish format:
@@ -196,13 +144,8 @@ Phone numbers are generated deterministically in Polish format:
 
 where ABC, DEF, GHI are pseudo-random numeric blocks:
 
+<img width="633" height="159" alt="image" src="https://github.com/user-attachments/assets/53853163-3505-4769-a8c3-b1968bd4bf78" />
 
-<!-- SET phone = CONCAT(
-    '+48 ',
-    FLOOR(500 + seeded_rand(p_seed, p_batch_idx, p_row_idx, 30) * 100), ' ',
-    FLOOR(100 + seeded_rand(p_seed, p_batch_idx, p_row_idx, 31) * 900), ' ',
-    FLOOR(100 + seeded_rand(p_seed, p_batch_idx, p_row_idx, 32) * 900)
-); -->
 
 +48 is the Polish country code
 Sufficiently realistic for demonstration purposes
@@ -210,21 +153,13 @@ Email
 E-mail addresses are built from the chosen first/last name + random number:
 
 
-<!-- SET email = LOWER(CONCAT(
-    v_first, '.', v_last,
-    FLOOR(seeded_rand(p_seed, p_batch_idx, p_row_idx, 40) * 1000),
-    '@example.com'
-)); -->
+<img width="634" height="156" alt="image" src="https://github.com/user-attachments/assets/0d13403a-7f65-4166-82da-b8e86f81f811" />
+
 
 3. generate_fake_user_batch – generate a batch of users
 Signature:
 
-<!-- CREATE PROCEDURE generate_fake_user_batch(
-    IN p_locale_id INT,
-    IN p_seed BIGINT,
-    IN p_batch_idx INT,
-    IN p_batch_size INT
-) -->
+<img width="679" height="203" alt="image" src="https://github.com/user-attachments/assets/789f2416-8732-496f-af36-4f4839f68b20" />
 
 Arguments:
 p_locale_id – locale
@@ -234,15 +169,8 @@ p_batch_size – how many users to generate at once (e.g. 10)
 Behavior:
 Creates a temporary table tmp_users:
 
-<!-- CREATE TEMPORARY TABLE IF NOT EXISTS tmp_users (
-    full_name VARCHAR(255),
-    latitude DOUBLE,
-    longitude DOUBLE,
-    height_cm DOUBLE,
-    weight_kg DOUBLE,
-    phone VARCHAR(50),
-    email VARCHAR(255)
-); -->
+<img width="529" height="225" alt="image" src="https://github.com/user-attachments/assets/c352b4a2-0df2-4a97-ac2c-f04d483fab7f" />
+
 
 Loops from i = 0 to p_batch_size - 1:
 For each i, repeats the same logic as generate_fake_user:
@@ -254,17 +182,21 @@ email
 Inserts a row into tmp_users
 Returns the content of tmp_users:
 
-<!-- SELECT * FROM tmp_users; -->
+
+(  SELECT * FROM tmp_users; )
+
 
 Determinism and reproducibility:
 
-    For fixed (p_locale_id, p_seed, p_batch_idx, p_batch_size), the output rows are always identical.
+ For fixed (p_locale_id, p_seed, p_batch_idx, p_batch_size), the output rows are always identical.
 
-    Changing p_batch_idx (0, 1, 2, …) gives non-overlapping deterministic batches (“next page of users”).
-    Example usage:
+ Changing p_batch_idx (0, 1, 2, …) gives non-overlapping deterministic batches (“next page of users”).
+ Example usage:
 
-<!-- CALL generate_fake_user_batch(1, 12345, 0, 10);  -- first 10 users, locale 1
+
+CALL generate_fake_user_batch(1, 12345, 0, 10);  -- first 10 users, locale 1
 CALL generate_fake_user_batch(1, 12345, 1, 10);  -- next 10 users -->
+
 
 Flask Integration (How the library is used)
 The Flask app connects to MySQL and treats the stored procedures as a backend faker API.
