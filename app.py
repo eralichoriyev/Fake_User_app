@@ -20,12 +20,10 @@ def index():
 
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
-
-    # load locales for dropdown
+    
     cursor.execute("SELECT id, code FROM locales")
     locales = cursor.fetchall()
 
-    # call batch procedure
     cursor.callproc(
         "generate_fake_user_batch",
         [locale_id, seed, batch, batch_size]
